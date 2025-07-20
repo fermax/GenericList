@@ -7,101 +7,113 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Stream;
 
-@SuppressWarnings("unchecked")
+/**
+ * A generic resizable list implementation for elements that are Comparable.
+ * 
+ * @param <T> the type of elements in this list
+ */
 public class GenericList<T extends Comparable<T>> implements Iterable<T>, Comparable<GenericList<T>> {
-    private int length;
+    private static final int DEFAULT_CAPACITY = 10;
+
+    private int capacity;
     private T[] items;
-    private T[] newItems;
     private int count;
 
-    public GenericList(){
-        length = 10;
-        items = (T[]) new Comparable[this.length];
+    /**
+     * Constructs an empty list with the default initial capacity.
+     */
+    @SuppressWarnings("unchecked")
+    public GenericList() {
+        capacity = DEFAULT_CAPACITY;
+        items = (T[]) new Comparable[capacity];
+        count = 0;
     }
 
-    public void add(T item){
-        if(count < length)
-            items[count++] = item;
-        else{
-            int oldlength = length;
-            length = length * 2;
-            newItems = (T[]) new Comparable[length];
-            for(int i = 0; i < oldlength; i++){
-                if(items[i] != null)
-                    newItems[i]  = items[i];
-            }
-            newItems[count++] = item;
+    /**
+     * Adds an item to the list, resizing if necessary.
+     * @param item the item to add
+     */
+    @SuppressWarnings("unchecked")
+    public void add(T item) {
+        if (count == capacity) {
+            capacity *= 2;
+            T[] newItems = (T[]) new Comparable[capacity];
+            System.arraycopy(items, 0, newItems, 0, count);
             items = newItems;
         }
+        items[count++] = item;
     }
 
-    public T get(int index){
-        if( index < length ){
-            return items[index];
-        }else{
-            throw new IndexOutOfBoundsException("index bigger than GenericList size!");
+    /**
+     * Gets the item at the specified index.
+     * @param index the index
+     * @return the item
+     * @throws IndexOutOfBoundsException if index is out of bounds
+     */
+    public T get(int index) {
+        if (index < 0 || index >= count) {
+            throw new IndexOutOfBoundsException("Index: " + index + ", Size: " + count);
         }
-        
+        return items[index];
     }
 
-    public int size(){
+    /**
+     * Returns the number of elements in the list.
+     * @return the size
+     */
+    public int size() {
         return count;
     }
 
-    public int length(){
-        return length;
+    /**
+     * Returns the current capacity of the internal array.
+     * @return the capacity
+     */
+    public int capacity() {
+        return capacity;
     }
 
+    /**
+     * Removes all elements from the list.
+     */
+    @SuppressWarnings("unchecked")
     public void clear() {
-        items = (T[]) new Comparable[10];
+        items = (T[]) new Comparable[DEFAULT_CAPACITY];
         count = 0;
-        length = 10;
+        capacity = DEFAULT_CAPACITY;
     }
 
-    public Stream<T> stream(){
+    /**
+     * Returns a Stream of the elements in the list.
+     * @return a Stream of elements
+     */
+    public Stream<T> stream() {
         return Arrays.stream(items, 0, count).filter(Objects::nonNull);
     }
 
     @Override
     public Iterator<T> iterator() {
-        return new ListIterator(this);
+        return new ListIterator();
     }
 
-    private class ListIterator implements Iterator<T> {
-        private GenericList<T> list;
-        private int index;
-
-        public ListIterator(GenericList<T> list){ // because of 'this'
-            this.list = list; 
-        }
-        @Override
-        public boolean hasNext() {
-            return (index < list.count);
-        }
-
-        @Override
-        public T next() {
-            return list.items[index++];
-        }
-        
-    }
-
-    public List<T> toList(){ // O(n)
-        List<T> newList = new ArrayList<>();
+    /**
+     * Converts this list to a standard Java List.
+     * @return a new List containing the elements
+     */
+    public List<T> toList() {
+        List<T> newList = new ArrayList<>(count);
         for (int i = 0; i < count; i++) {
             newList.add(items[i]);
         }
         return newList;
     }
-    
+
     @Override
-    public String toString(){
+    public String toString() {
         StringBuilder sb = new StringBuilder("[");
-        for(int i = 0; i < count; i++){
-            if (i != count - 1)
-                sb.append(items[i]).append(", ");
-            else
-                sb.append(items[i]); 
+        for (int i = 0; i < count; i++) {
+            sb.append(items[i]);
+            if (i < count - 1) sb.append(", ");
         }
         sb.append("]");
         return sb.toString();
@@ -109,16 +121,25 @@ public class GenericList<T extends Comparable<T>> implements Iterable<T>, Compar
 
     @Override
     public int compareTo(GenericList<T> otherList) {
-        // Compare the lists element by element
         int minSize = Math.min(this.size(), otherList.size());
         for (int i = 0; i < minSize; i++) {
             int comparison = this.get(i).compareTo(otherList.get(i));
-            if (comparison != 0) {
-                return comparison;
-            }
+            if (comparison != 0) return comparison;
         }
-        // If all elements are equal up to minSize, the shorter list comes first
         return Integer.compare(this.size(), otherList.size());
     }
 
+    private class ListIterator implements Iterator<T> {
+        private int index = 0;
+
+        @Override
+        public boolean hasNext() {
+            return index < count;
+        }
+
+        @Override
+        public T next() {
+            return items[index++];
+        }
+    }
 }
